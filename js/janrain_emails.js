@@ -44,18 +44,14 @@
         Drupal.janrain_email.prepare_file_link(response.file, context, type);
     }
 
-    Drupal.janrain_email.prepare_html_file_link = function(response, context) {
-        $('a.'+type+'-file-link.disabled', context).removeClass('disabled').attr('href', response);
-    }
 
     Drupal.janrain_email.prepare_file_link = function(response, context, type) {
-        $('a.html-file-link.disabled', context).removeClass('disabled').attr('href', response);
+        $('a.'+type+'-file-link', context).attr('href', response).fadeIn();
     }
 
 
     Drupal.behaviors.janrain_emails = {
         attach: function (context) {
-            Drupal.janrain_email.disable_link(context);
 
             $('#edit-janrain-emails-title').on('change', function(){
                 var title = $('#edit-janrain-emails-title').val();
@@ -66,6 +62,7 @@
             $('#edit-janrain-emails-body').on('change', function(){
                 var body = $('#edit-janrain-emails-body').val();
                 $('.html-body').empty().html(body);
+                console.log(body);
             });
 
             $('#edit-janrain-emails-body-text').on('change', function(){
@@ -75,18 +72,7 @@
 
             $('#edit-get-html').on('click', function(e){
                 e.preventDefault();
-                var body = $('.html-body').html();
-                var title = $('#edit-janrain-emails-title').val();
-                var filename = $('#edit-janrain-emails-filename').val();
-                var parameters = {
-                    "body": body,
-                    "title": title,
-                    "filename": filename + '.html.txt',
-                    "type": 'html'
-                };
-                var url = '/janrain/emails/';
-                var response = Drupal.janrain_email.post_content(parameters, url);
-                Drupal.janrain_email.prepare_html_file_link(response.file, context);
+                Drupal.janrain_email.make_file('html', context);
             });
 
             $('#edit-get-text').on('click', function(e){

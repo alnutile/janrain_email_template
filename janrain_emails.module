@@ -78,7 +78,8 @@ function janrain_emails_form($form, $form_state) {
     $form['janrain_emails_body_text'] = array(
         '#type' => 'textarea',
         '#title' => t("Text Body"),
-        '#default_value' => variable_get('janrain_emails_body_text', FALSE)
+        '#default_value' => variable_get('janrain_emails_body_text', FALSE),
+        '#descriptoin' => t('You can use common html markup like <br> <p></p> <div></div> and tables all of which play well with emails.')
     );
 
     $form['results_html'] = array(
@@ -102,8 +103,7 @@ function janrain_emails_form($form, $form_state) {
     );
 
     $form['results_html']['actions']['get_file'] = array(
-        '#markup' => l('Get File', 'index.php', array('attributes' => array('class' => array('html-file-link', 'disabled'), 'target' => '_blank'))),
-        '#suffix' => '<div>Click "Make HTML File" first then click "Get File" and download file.</div>'
+        '#markup' => l('Get File', 'index.php', array('attributes' => array('class' => array('html-file-link'), 'style' => array('display: none;'), 'target' => '_blank'))),
     );
 
     $form['results_text'] = array(
@@ -126,8 +126,7 @@ function janrain_emails_form($form, $form_state) {
     );
 
     $form['results_text']['actions']['get_file_text'] = array(
-        '#markup' => l('Get Text', 'index.php', array('attributes' => array('class' => array('text-file-link', 'disabled'), 'target' => '_blank'))),
-        '#suffix' => '<div>Click "Make TEXT File" first then click "Get File" and download file.</div>'
+        '#markup' => l('Get Text', 'index.php', array('attributes' => array('class' => array('text-file-link'), 'style' => array('display: none;'), 'target' => '_blank'))),
     );
     return system_settings_form($form);
 }
@@ -162,7 +161,8 @@ function janrain_emails_create() {
 
 function _janrain_emails_build($payload) {
     if($payload['type'] == 'html') {
-        $body = nl2br($payload['body'], $is_xhtml = false);
+        watchdog('test_body', print_r($payload['body'], 1));
+        $body = $payload['body']; //nl2br($payload['body'], $is_xhtml = false);
         $wrapper = janrain_emails_read_file('template_html.html');
         $wrapper = str_replace('Body will go here', $body, $wrapper);
         $title = $payload['title'];
