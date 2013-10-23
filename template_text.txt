@@ -1,0 +1,5 @@
+<div class='text-title'>Title will show here</div>
+
+<div class='text-body'>Body will go here</div>
+
+(c)2013 Pfizer

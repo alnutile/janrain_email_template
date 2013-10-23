@@ -1,0 +1,190 @@
+<?php
+
+/**
+ * @file janrain_emails.module
+ * TODO: Enter file description here.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function janrain_emails_help($path, $arg) {
+  switch ($path) {
+    // Main module help for the block module
+    case 'admin/help#janrain_emails':
+      return '<p>Adding text to the emails html and text</p>';
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function janrain_emails_menu() {
+  $items = array();
+  
+  $items['admin/config/janrain/emails'] = array(
+    'title' => 'JanRain Email Templates',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('janrain_emails_form'),
+    'access arguments' => array('administer janrain emails'),
+    'type' => MENU_CALLBACK,
+  );
+    $items['janrain/emails'] = array(
+        'page callback' => 'janrain_emails_create',
+        'access arguments' => array('administer janrain emails'),
+        'type' => MENU_LOCAL_TASK,
+    );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function janrain_emails_permission() {
+  return array(
+    'administer janrain emails' =>  array(
+      'title' => t('Administer Emails'),
+      'description' => t('Make email templates you can copy out.'),
+    ),
+  );
+}
+
+
+function janrain_emails_form($form, $form_state) {
+    $path = drupal_get_path('module', 'janrain_emails');
+    drupal_add_js($path . '/js/jquery.ba-replacetext.js');
+    drupal_add_js($path . '/js/janrain_emails.js');
+
+    $form['janrain_emails_filename'] = array(
+        '#type' => 'textfield',
+        '#title' => t("File Name"),
+        '#default_value' => variable_get('janrain_emails_filename', FALSE),
+        '#description' => t('Set filename minus the extension'),
+        '#placeholder' => 'passwordRest'
+    );
+
+    $form['janrain_emails_title'] = array(
+        '#type' => 'textfield',
+        '#title' => t("Title"),
+        '#default_value' => variable_get('janrain_emails_title', FALSE)
+    );
+
+    $form['janrain_emails_body'] = array(
+        '#type' => 'textarea',
+        '#title' => t("HTML Body"),
+        '#default_value' => variable_get('janrain_emails_body', FALSE)
+    );
+
+    $form['janrain_emails_body_text'] = array(
+        '#type' => 'textarea',
+        '#title' => t("Text Body"),
+        '#default_value' => variable_get('janrain_emails_body_text', FALSE)
+    );
+
+    $form['results_html'] = array(
+        '#type' => 'fieldset',
+        '#title' => t("HTML Output"),
+        '#collapsed' => FALSE,
+        '#collapsible' => TRUE,
+    );
+
+    $form['results_html']['output'] = array(
+        '#markup' => janrain_emails_read_file('template_html.html'),
+    );
+
+    $form['results_html']['actions'] = array(
+        '#type' => 'actions'
+    );
+
+    $form['results_html']['actions']['get_html'] = array(
+        '#type' => 'button',
+        '#value' => t("Make HTML File")
+    );
+
+    $form['results_html']['actions']['get_file'] = array(
+        '#markup' => l('Get File', 'index.php', array('attributes' => array('class' => array('html-file-link', 'disabled'), 'target' => '_blank'))),
+        '#suffix' => '<div>Click "Make HTML File" first then click "Get File" and download file.</div>'
+    );
+
+    $form['results_text'] = array(
+        '#type' => 'fieldset',
+        '#title' => t("Text Output"),
+        '#collapsed' => FALSE,
+        '#collapsible' => TRUE,
+    );
+    $form['results_text']['output'] = array(
+        '#markup' => janrain_emails_read_file('template_text.txt', TRUE),
+    );
+
+    $form['results_text']['actions'] = array(
+        '#type' => 'actions'
+    );
+
+    $form['results_text']['actions']['get_text'] = array(
+        '#type' => 'button',
+        '#value' => t("Make Text File")
+    );
+
+    $form['results_text']['actions']['get_file_text'] = array(
+        '#markup' => l('Get Text', 'index.php', array('attributes' => array('class' => array('text-file-link', 'disabled'), 'target' => '_blank'))),
+        '#suffix' => '<div>Click "Make TEXT File" first then click "Get File" and download file.</div>'
+    );
+    return system_settings_form($form);
+}
+
+
+function janrain_emails_read_file($filename, $text = FALSE) {
+    $path = drupal_get_path('module', 'janrain_emails');
+    $full_path = DRUPAL_ROOT . '/' . $path . '/' . $filename;
+    if(filesize($full_path) > 0) {
+        if($text) {
+            $output = nl2br(file_get_contents($full_path));
+        } else {
+            $file_open = fopen($full_path, "r");
+            $output = fread($file_open, filesize($full_path));
+        }
+        return $output;
+    } else {
+        $message = t('Could not read the file.');
+        throw new \RuntimeException($message);
+    }
+}
+
+function janrain_emails_create() {
+    $payload = drupal_json_decode(file_get_contents('php://input'));
+    $build_file = _janrain_emails_build($payload);
+    $file_save = _janrain_save_to_folder($build_file, $payload['filename']);
+    $files_folder = file_build_uri("/");
+    $relative_path = url($path = file_create_url("$files_folder/{$payload['filename']}"));
+    drupal_json_output(array('file' => $relative_path));
+    exit();
+}
+
+function _janrain_emails_build($payload) {
+    if($payload['type'] == 'html') {
+        $body = nl2br($payload['body'], $is_xhtml = false);
+        $wrapper = janrain_emails_read_file('template_html.html');
+        $wrapper = str_replace('Body will go here', $body, $wrapper);
+        $title = $payload['title'];
+        $wrapper = str_replace('Title will show here', $title, $wrapper);
+    } else {
+        $body = preg_replace('#<br\s*?/?>#i', "\n", $payload['body']);
+        $wrapper = janrain_emails_read_file('template_text.txt');
+        $wrapper = str_replace("<div class='text-body'>Body will go here</div>", $body, $wrapper);
+        $title = $payload['title'];
+        $wrapper = str_replace("<div class='text-title'>Title will show here</div>", $title, $wrapper);
+    }
+
+    return $wrapper;
+}
+
+function _janrain_save_to_folder($content, $filename) {
+    $path = file_build_uri("/");
+    $response = file_unmanaged_save_data($content, $path . '/' . $filename, $replace = FILE_EXISTS_REPLACE);
+    if($response) {
+        return $response;
+    } else {
+        $message = t('The file could not be saved.');
+        throw new \RuntimeException($message);
+    }
+}

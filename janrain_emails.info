@@ -1,0 +1,5 @@
+name = Janrain emails
+description = Create HTML and Text emails
+package = JanRain
+core = 7.x
+files[] = tests/janrain_emails.test
